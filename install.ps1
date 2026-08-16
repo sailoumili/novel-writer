@@ -1,8 +1,8 @@
-# 手动安装备用脚本（推荐用：dsh plugin --profile web add github:sailoumili/novel-writer）
+﻿# 手动安装备用脚本（推荐用：dsh plugin --profile web add github:sailoumili/novel-writer）
 # ============================================================
-# 小说创作 · 六角色协同 —— 一键安装脚本（Windows）
+# 多核协同写作模式 —— 一键安装脚本（Windows）
 # 用于 DeepSeek Harness（DSH）
-# 装完后：刷新或重启 DSH 页面，新建会话时选「小说创作 · 六角色协同」
+# 装完后：刷新或重启 DSH 页面，新建会话时选「多核协同写作模式」
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -16,7 +16,7 @@ $presetId = "novel-writer"
 # 目标目录：~/.dsh/.agent-presets/novel-writer
 $target = Join-Path $env:USERPROFILE (".dsh\.agent-presets\" + $presetId)
 
-Write-Host "正在安装「小说创作 · 六角色协同」..." -ForegroundColor Cyan
+Write-Host "正在安装「多核协同写作模式」..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $target | Out-Null
 
 foreach ($f in @("agent.cordis.yml", "preset.yml")) {
@@ -27,4 +27,4 @@ foreach ($f in @("agent.cordis.yml", "preset.yml")) {
 Write-Host ""
 Write-Host "✅ 安装完成！" -ForegroundColor Green
 Write-Host "   预设位置：$target"
-Write-Host "   下一步：刷新或重启 DSH 页面，新建会话时选「小说创作 · 六角色协同」。"
+Write-Host "   下一步：刷新或重启 DSH 页面，新建会话时选「多核协同写作模式」。"

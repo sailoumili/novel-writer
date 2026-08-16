@@ -1,14 +1,13 @@
 {
   "name": "novel-writer",
   "version": "1.0.0",
-  "description": "Novel Writing · Six-Role Collaboration — a DeepSeek Harness (DSH) preset plugin that installs a six-role collaborative novel-writing mode (小说创作 · 六角色协同).",
+  "description": "Multi-Core Collaborative Novel Writing — a DeepSeek Harness (DSH) preset plugin that installs a multi-agent novel-writing mode: one conductor plus five specialized subagents (多核协同写作模式).",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./package.json": "./package.json"
   },
-  "keywords": ["deepseek-harness", "dsh", "agent-preset", "novel-writing", "ai-writing", "chinese-novel"],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"

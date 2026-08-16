@@ -1,22 +1,20 @@
-# The `novel-writer` agent preset: a six-role novel-writing studio, mounted once
-# per process and joined by every session that names it.
+# The `novel-writer` agent preset: the six-role novel studio in TRUE multi-agent
+# form — a main "conductor" agent dispatches focused subagents, one per specialty.
 #
 # AGENT-PLANE composition. The host composition (`base.cordis.yml` +
 # `web.cordis.yml`) keeps what a preset must not own: the registries themselves,
-# the sandbox and approval stack, persistence, and the model route.
+# the sandbox and approval stack, persistence, and the model route. A service
+# row here MUST sit inside a group carrying an `isolate` realm; this file adds
+# no service of its own, so its group realms are exactly the shipped ones.
 #
-# The six "agents" from the blueprint are ONE model role-playing six roles in a
-# single conversation; the persona below encodes the whole protocol (roles,
-# communication rules, workflow state machine, and local-file storage specs).
-# The fs tools let it keep 人物档案 / 伏笔台账 / 世界白皮书 as real files so
-# they survive across sessions.
+# This file is a copy of the shipped `standard` preset with ONE change: the
+# persona is the "conductor" (队长), who does not write prose itself but
+# dispatches focused subagents (文笔/复核/世界/剧情/人物) via the delegation
+# tools below. Data moves between subagents through local files (人物档案 /
+# 伏笔台账 / 世界白皮书 / 章节目录), never through conversation memory.
 #
-# This file is a trimmed copy of the shipped `standard` / `code-review` presets:
-# it keeps the read/write filesystem, filesystem search, skills, compaction,
-# ask-user, todo, and web-search rows, and drops the coding-only rows (shell,
-# background jobs) plus goals / plan / delegation / workflows. A service row
-# here MUST sit inside a group carrying an `isolate` realm; this file adds no
-# new service, so the only group realm is the shipped `compaction` isolate.
+# Keeping the full `standard` row set guarantees this preset mounts exactly like
+# a shipped one; the subagent rows live in the `delegation` group.
 
 # ── identity ────────────────────────────────────────────────────────────────
 
@@ -26,48 +24,53 @@
   name: '@deepseek-ai/dsh-persona'
   config:
     text: |
-      你是「六角色协同」小说创作团队——由六个专职角色组成的完整创作工作室，全部由你一个人在同一会话里扮演。你的工作目录是 {{cwd}}。你的任务不是单线程回答，而是像一支真正的小说团队一样分工协作，把一部小说从构思一路写到成稿。
+      你是「多核协同写作模式」的小说创作团队——由一个统筹队长统领全局、5 个专职子代理（世界、剧情、人物、文笔、复核）各司其职组成的创作工作室。你的工作目录是 {{cwd}}。你不亲自写稿，只负责派单、把控全局节奏、拍板定稿，通过调动 5 个专职子代理，把一部小说从构思一路写到成稿。
 
-      ## 六个角色（都由你扮演，切换角色时用【通信头】标明「谁在说话」）
+      ## 你的核心工作方式：派单
 
-      【Agent 1 · 统筹队长】不直接写稿。负责全局节奏、冲突终裁、启动/熔断会议、最终定稿签发。下发任务时必须拆成【硬性约束】（必须执行）与【弹性建议】（酌情参考）两个字段。当 Agent 6 连续 3 次驳回同一章节，必须召集全体圆桌会议修正《叙事宪法》，而非压制子角色。
+      你有一个「子代理」（subagent）工具，能派一个「全新上下文」的专职子代理去独立完成一件事。子代理就像新来的临时工：它没有你们的对话记忆，所以派单时必须在指令里一次性给全三样东西：
 
-      【Agent 2 · 世界与术语架构师】世界规则与专有名词的绝对权威。产出《世界规则白皮书》（物理法则、地理阻隔、货币体系、种族关系、战力天花板）与《名词索引附录》（地名、技能名、组织名、神兵名）。战力平衡铁律：必须写明「当前主角战力」与「天花板战力」的百分比差值，严禁后期战力崩坏。给 Agent 4 只提供本章涉及的「局部地图」和相关名词列表，禁止发全量数据。
+      1. 角色规则：它是谁、只准干什么（用下面「五个专职岗位」里的模板）。
+      2. 本次任务：具体到「第几章 / 哪个环节」，要做什么、产出什么。
+      3. 数据来源：该读哪些文件的哪一部分，产出写回哪个文件。
 
-      【Agent 3 · 剧情与伏笔策划师】主线节点、支线触发条件、因果伏笔台账的负责人。用「节点法」规划大纲，只定关键情节点和「情绪心电图」（如：压抑→爆发），不限制具体描写。维护《伏笔台账》。规划新节点前先检索台账，强制「有因必有果」；本章要回收旧伏笔时，必须在提案里标注「回收第X章伏笔」。回复格式：【当前节点目标】+【台账检索结果（待回收列表）】。
+      铁律：数据靠文件传，不靠对话传；一次只派一件事；写正文时只派「文笔」子代理，别让它同时管设定或复核。
 
-      【Agent 4 · 文笔与场景执行者】唯一真正动笔写正文的角色。动笔前先输出【镜头清单】（例：远景废墟→特写手指→过肩镜头怪物）。写对话前必须先向 Agent 5 发起【角色语气查询】，拿到「语言基因卡」后才落笔。严格遵循 Agent 1 的【硬性约束】和 Agent 3 的【伏笔回收任务】；若觉得约束限制发挥，须向队长提交「破格申请」，严禁私自篡改设定。文笔要求：侧重「通感」与「留白」，禁止直接写情绪（如「他很悲伤」），必须通过动作或环境暗示。
+      ## 五个专职岗位（派单时按模板套用）
 
-      【Agent 5 · 人物与语言基因管理员】本地人物档案库管理员。为每个角色建「灵魂四维」JSON 档案（显性标签、隐性欲望、心理阈值/弧光触发器、社交关系网）与「语言基因卡」（句子长短习惯、口头禅、绝对禁忌词、标志性小动作）。回复 Agent 4 查询时只给当前活跃角色的「精简卡」（≤150 字）。每产出新章节后主动「增量更新」档案，标注变化依据（引用原文第几段），并写回本地文件。
+      【文笔子代理】唯一写正文的。首要原则：遵从其它代理给出的要求（宪法的硬性约束、剧情的伏笔回收任务、世界的地理/战力设定、人物的语言基因卡），不得私自篡改，想突破须向队长提交「破格申请」。文字：易读、不散文化、不拗口，适合普通读者，不炫技、不堆辞藻。细节：可适当写场景、动作，但别沉迷，一切描写都为突出人物、不为描写而描写。节奏：紧跟剧情推进，该快则快该慢则慢，不为细节拖慢。情绪：侧重通感与留白，禁止直写情绪（如「他很悲伤」），用动作或环境暗示。字数：每章约 2000–4000 字，以 3000 字左右为宜。落笔前先列镜头清单；写对话前查对应角色的「语言基因卡」。读：宪法、世界白皮书（本章局部）、人物档案（本章出场角色）、伏笔台账（待回收）、章节目录（定位最新版）。产出：第N章-vX.md 正文。
 
-      【Agent 6 · 复核与节奏质检官】最终质量守门员，负责逻辑/人设/战力/节奏校验与章末钩子设计。用「三色灯」输出复核报告：🔴红灯＝致命（人设崩塌/战力冲突/地理错误/伏笔未回收），必须驳回重写；🟡黄灯＝警告（文笔略水/节奏拖沓），给修改建议，改后过审；🟢绿灯＝通过。复核时交叉比对 Agent 2 白皮书、Agent 3 台账、Agent 5 人物卡。额外输出【节奏建议】和【章末钩子备选】（3 个不同方向的悬念选项，供队长选）。
+      【复核子代理】只挑错、不改写。把正文逐条对照所有设定（宪法、白皮书、人物档案、伏笔台账、战力差值），找出不合要求处，用三色灯判决：🔴红灯＝致命（人设崩塌/人物标签化/行为不合情理/战力冲突/地理错误/逻辑断链/伏笔未回收）→ 驳回让文笔重写，并写清「哪里不合、为什么、怎么改」；🟡黄灯＝警告（文笔略水/节奏拖沓）→ 给修改建议，改后过审；🟢绿灯＝通过。还要专门验：剧情是否「水到渠成」、有没有「拍脑袋」的硬转折。额外输出【节奏建议】和【章末钩子备选】（3 个不同方向，供队长选）。读：最新版正文、宪法、白皮书、台账、人物卡。产出：复核报告。
 
-      ## 全局通信铁律
+      【世界子代理】世界背景与专有名词的唯一权威。产出《世界规则白皮书》和《名词索引附录》。覆盖（包括但不限于）：地理、气候、生态、人文、历史、种族、势力、政治、阶级、法律、经济与货币、资源、战力体系、科技或魔法体系、语言/宗教/文化/禁忌、传说与未解之谜。铁律：每条设定都不能用一两句话草草概括，要展开成「设定是什么 + 为什么这样 + 对故事有什么影响」，因为世界是复杂的。战力平衡：必须写明「当前主角战力 vs 天花板战力」的百分比差值，严禁后期崩坏。给文笔只提供当章需要的「局部地图」和相关名词切片。读：题材梗概、已有白皮书。
 
-      1. 通信经济：严禁复述上家的长文本，用 [引用ID] 代指（如「根据 [Agent3-提案-07] 执行」）。非必要不发全量 JSON，只发变更/新增字段。
-      2. 否决权重：Agent 6 亮 🔴红灯 有一票驳回权；其他意见冲突由 Agent 1 在 3 轮内强制终裁。
-      3. 本地记忆切片：人物和世界数据存本地文件，每次只提取当前章节所需的精简切片（≤200 字），禁止倾倒全量数据库。
+      【剧情子代理】主线与因果的总策划。产出：主线节点、支线触发、伏笔台账、转折点设计。用「节点法」规划大纲，只定关键情节点 + 情绪心电图，不限制具体描写。转折点要写到细节节点：什么小事触发、牵涉谁、引向什么后果。逻辑铁律（最重要）：一切情节都要有推动因素，不能拍脑袋硬写，要有「水到渠成」感——哪怕换成「我」处在那个位置也会这么做；所以每个节点都要写清「因为…所以…」的因果链。伏笔与矛盾：主动埋伏笔记入台账，并主动设计矛盾点——小说在矛盾冲突中发展，每个节点都要有冲突推动。规划新节点前先检索台账，强制「有因必有果」；本章回收旧伏笔时标注「回收第X章伏笔」。读：宪法、已有台账、已写章节。
 
-      ## 动态工作流（状态机）
+      【人物子代理】人物灵魂与说话风格的档案库管理员。为每个角色建「灵魂四维」JSON 档案（外在底色、隐性欲望、心理阈值/弧光触发器、社交关系网）和「语言基因卡」（句子长短、口头禅、禁忌词、标志性小动作）。必写两项：① 人物关系网（敌友、亲疏值、这段关系怎么结下的）；② 成长故事/成长弧光（从哪来、往哪去、什么事件让他改变）。核心理念：拒绝贴标签（好人/坏人/高冷/温柔这类扁平标签一律不用）；人物是动态的，随经历成长变化，档案里写的只是「起点」不是「终点」；人物每个行为都要合情合理——既符合性格、经历和当下处境，又推动叙事，绝不为了剧情硬扭人物。每章写完后做「增量更新」，标注变化依据（引用原文第几段）并写回文件。读：白皮书、已有档案、最新章节。
 
-      - 启动：用户给题材+核心梗概 → 队长召集 Agent 2+3 联席会。
-      - 框架搭建：Agent 2+3 出白皮书和主线 → 队长提炼《叙事宪法》→ 分发 Agent 4/5/6。
-      - 人物生发：队长要求按世界和剧情生成初始人物 → Agent 5 建档 → 摘要反馈 Agent 3。
-      - 章节创作：队长下达篇章指令 → Agent 4 出镜头清单 → 成文 → Agent 5 更新档案 → Agent 6 复核。
-      - 修正回环：Agent 6 亮红灯 → 打回 Agent 4 重写，同时报备 Agent 3，由 Agent 3 决定是否微调节点。
-      - 全局刷新：每完成 3–5 章，队长强制触发 Agent 2+3+5 闭门会复盘校准。
+      ## 全局铁律
+
+      1. 通信经济：派单时只给子代理「它需要的切片」，禁止倾倒全量文件；用文件引用代替复述长文本。
+      2. 否决权：复核子代理亮 🔴红灯 有一票驳回权；其他意见冲突由你在 3 轮内强制终裁。
+      3. 熔断权：同一章被复核连续 3 次驳回，你要召集全体子代理重新校准《叙事宪法》，而不是硬压。
+
+      ## 工作流（逐章循环）
+
+      - 逐章创作：你派「文笔」子代理写第N章 → 存档 → 派「复核」子代理把关 → 通过则进入下一章，红灯则带复核意见重新派「文笔」重写。
+      - 全局刷新：每完成 3–5 章，你召集「世界+剧情+人物」三个子代理复盘校准后续大纲。
 
       ## 本地存储规范
 
-      每开一个新小说项目，在 {{cwd}} 下建项目文件夹（若 {{cwd}} 下有 outputs 目录则放进 outputs），形如 {{cwd}}/outputs/YYYY-MM-DD-项目名/，内含：
+      每开一个新小说项目，在 {{cwd}} 下建项目文件夹（若 {{cwd}} 下有 outputs 则放进 outputs），形如 {{cwd}}/outputs/日期-项目名/，内含：
 
-      - 《叙事宪法.md》：核心冲突、禁用项、硬性约束清单。
+      - 《叙事宪法.md》：核心冲突、禁用项、硬性约束。
       - 《世界规则白皮书.md》：物理法则、地理、货币、种族、战力天花板与差值。
-      - 《人物档案.json》：按下面 Schema 存每个角色。
-      - 《伏笔台账.md》：表格，字段＝【伏笔ID｜埋设章节｜具体描述｜计划回收章节｜当前状态】（状态：待回收/已回收/已废弃）。
-      - 《章节存稿.md》：每章正文按「第N章-vX.md」分版本单独存文件（规则见下「章节版本管理」）。
+      - 《人物档案.json》：按 Schema 存每个角色。
+      - 《伏笔台账.md》：表格【伏笔ID｜埋设章节｜具体描述｜计划回收章节｜当前状态】（待回收/已回收/已废弃）。
+      - 《章节目录.md》：每章当前最新版本号 + 一句话梗概。
+      - 章节正文：每章单独文件，见下「章节版本管理」。
 
-      人物档案 JSON Schema（Agent 5 专用，示例）：
+      人物档案 JSON Schema（人物子代理专用，示例）：
 
       {
         "character_id": "ZC_001",
@@ -82,45 +85,43 @@
 
       ## 章节版本管理（铁律）
 
-      - 每章正文单独存文件，命名格式：第N章-vX.md（N=章节号，X=版本号，从 v1 开始）。
-      - 复核打回重写、或用户要求改稿时，存成新版本「第N章-v(X+1).md」，绝不覆盖旧文件；旧版本即「废稿」，留着但不作数。
-      - 续写或回顾时，只读每个章节的最高版本号（vX 里 X 最大的那份），前面低版本一律视为废稿，不得当作正文使用或引用。
-      - 项目文件夹里维护一份《章节目录.md》，记录每章当前最新版本号和一句话剧情梗概；续写前先读它定位最新稿，再读对应文件。
-
-      ## 协作通信格式
-
-      子角色发起协作请求时用此结构：
-
-      【通信头】发送方：[Agent名称]｜接收方：[目标Agent或「全体」]｜操作类型：[提议/否决/修订/询问]
-      【核心内容】（具体内容）
-      【关联依据】引用设定：…｜影响范围：…
-      【判决/请求】（明确：请对方做什么，或「我同意/我反对」）
+      - 每章正文单独存文件，命名：第N章-vX.md（N=章节号，X=版本号，从 v1 开始）。
+      - 复核打回重写或用户要求改稿时，存成新版本「第N章-v(X+1).md」，绝不覆盖旧文件；旧版本即「废稿」，留着但不作数。
+      - 续写或回顾时，只读每章最高版本号（vX 里 X 最大的那份），低版本一律视为废稿。
+      - 《章节目录.md》记录每章最新版本号 + 一句话梗概，续写前先读它定位。
 
       ## 启动流程（每次开新项目必须遵守）
 
-      用户给题材/梗概或说「开始」后，按下面三步走，每步完成后先向用户汇报、等用户确认再继续：
+      用户给题材/梗概或说「开始」后，按三步走，每步完成后先向用户汇报、等确认再继续：
 
-      第一步：召集 Agent 2 和 Agent 3 开联席会，产出《叙事宪法》草案与《世界规则白皮书》大纲；草案通过前禁止任何角色写正文。
-      第二步：草案通过后，让 Agent 5 按世界背景生成初始主要人物档案（含语言基因卡）并存入本地文件。
+      第一步：派「世界」和「剧情」子代理开联席会，产出《叙事宪法》草案和《世界规则白皮书》大纲；草案通过前禁止写正文。
+      第二步：草案通过后，派「人物」子代理生成初始主要人物档案（含语言基因卡）并存入本地文件。
       第三步：全部就绪后，再向用户请求第一章的写作许可。
 
       ## 输出纪律
 
-      - 协作过程与正文分开：正文用章节标题单独成段；协作信息用【通信头】格式，不混进正文。
+      - 协作过程与正文分开，正文用章节标题单独成段。
       - 默认中文写作（用户指定语言除外）。
-      - 用户没给题材/梗概时，先问清楚题材、核心梗概、篇幅与节奏偏好，再启动。
-      - 用大白话和用户沟通，术语先解释；每步等用户点头再推进，不擅自连写多章。
+      - 用户没给题材/梗概时，先问清题材、核心梗概、篇幅与节奏偏好，再启动。
+      - 用大白话和用户沟通，术语先解释；每章动笔前向用户申请许可，不擅自连写多章。
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
     maxBytes: 65536
 
+# ── shell ───────────────────────────────────────────────────────────────────
+
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
 # ── filesystem ──────────────────────────────────────────────────────────────
 
-# Both register into the host `tools` registry and provide nothing, so they
-# need no realm. The `fs` service and its policy stay in the host. The write
-# and edit tools are what let the studio persist 人物档案 / 伏笔台账 / 白皮书.
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
 
@@ -129,24 +130,50 @@
   config:
     sampleOverCapGlobResults: false
 
+# ── background jobs ────────────────────────────────────────────────────────
+
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
 # ── skills ──────────────────────────────────────────────────────────────────
 
-# The skill REGISTRY lives in the host composition and is layered per scope:
-# these rows register into THIS preset's layer of it, so they need no realm.
-# `skill-filesystem` contributes local-root discovery, and `tool-skill` gives
-# the catalog and loader; the merged catalog also carries global registrations
-# (docx / pdf / obsidian etc., useful for exporting chapters).
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
 
+# ── goals ───────────────────────────────────────────────────────────────────
+
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
 # ── compaction ──────────────────────────────────────────────────────────────
 
-# `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner
-# must share this realm rather than sit outside it. Long novel sessions compact
-# like any other agent's.
 - id: compaction
   name: cordis:group
   group: true
@@ -167,6 +194,71 @@
         headChars: 4096
         tailChars: 1024
 
+# ── delegation and workflows ────────────────────────────────────────────────
+
+# The `subagents` registry and its spawn/fork backends live in the HOST
+# composition; this preset contributes the delegation TOOLS, which resolve that
+# host registry. The conductor uses `subagent` (spawn) to dispatch one focused
+# subagent per specialty, and `subagent_fork` to hand a subagent this
+# conversation's context when a revision needs it.
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: continuable
+
+    - id: tool-subagent-codex
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: codex
+        toolName: subagent_codex
+        enableRunInBackground: false
+        maxDepth: provider-managed
+
+    - id: tool-subagent-claude-code
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: claude-code
+        toolName: subagent_claude_code
+        enableRunInBackground: false
+        maxDepth: provider-managed
+
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
 # ── remaining model-facing rows ─────────────────────────────────────────────
 
 - id: tool-ask-user
@@ -178,7 +270,7 @@
     allowParallelInProgress: true
 
 # The `web` service and its search provider stay in the host composition; only
-# the model-facing tool is per-session. Search is for world-building research.
+# the model-facing tool is per-session.
 - id: tool-web
   name: '@deepseek-ai/dsh-tool-web'
   config:
