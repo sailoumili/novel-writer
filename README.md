@@ -23,10 +23,10 @@
 
 ### 方法一：插件安装（推荐）
 
-在 DSH 命令行里执行下面这一行即可（Windows / macOS / Linux 通用）：
+插件已发布到 npm（包名 `novel-writer`），在 DSH 命令行里执行下面这一行即可（Windows / macOS / Linux 通用）：
 
 ```
-dsh plugin --profile web add github:sailoumili/novel-writer
+dsh plugin --profile web add novel-writer
 ```
 
 装完后，**重启或刷新 DSH web**，新建会话时选「多核协同写作模式」即可。
