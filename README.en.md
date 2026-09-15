@@ -23,10 +23,10 @@ This is a **DSH preset plugin**: once installed, it automatically registers the 
 
 ### Option 1: Install as a plugin (recommended)
 
-Run this single command in your DSH terminal (works on Windows / macOS / Linux):
+Published on npm as `novel-writer`. Run this single command in your DSH terminal (works on Windows / macOS / Linux):
 
 ```
-dsh plugin --profile web add github:sailoumili/novel-writer
+dsh plugin --profile web add novel-writer
 ```
 
 After installing, **restart or refresh DSH web**, then pick 「多核协同写作模式」 when starting a new session.
