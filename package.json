@@ -2,16 +2,43 @@
   "name": "novel-writer",
   "version": "1.0.0",
   "description": "Multi-Core Collaborative Novel Writing — a DeepSeek Harness (DSH) preset plugin that installs a multi-agent novel-writing mode: one conductor plus five specialized subagents (多核协同写作模式).",
+  "author": "sailoumili",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "novel",
+    "writing",
+    "multi-agent",
+    "subagent",
+    "preset"
+  ],
+  "homepage": "https://github.com/sailoumili/novel-writer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sailoumili/novel-writer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sailoumili/novel-writer/issues"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./package.json": "./package.json"
   },
+  "files": [
+    "lib",
+    "agent.cordis.yml",
+    "preset.yml",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md"
+  ],
+  "license": "MIT",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
-  },
-  "license": "MIT"
+  }
 }
